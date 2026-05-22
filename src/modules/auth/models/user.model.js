@@ -2,12 +2,15 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    // =========================
-    // BASIC INFO
-    // =========================
-
     fullName: {
       type: String,
+      required: true,
+      trim: true,
+    },
+
+    username: {
+      type: String,
+      unique: true,
       required: true,
       trim: true,
     },
@@ -29,16 +32,13 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
+      select: false,
     },
 
     profileImage: {
       type: String,
       default: null,
     },
-
-    // =========================
-    // FAYDA SUPPORT
-    // =========================
 
     faydaId: {
       type: String,
@@ -51,81 +51,6 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    // =========================
-    // ROLE SYSTEM
-    // =========================
-
-    role: {
-      type: String,
-      enum: [
-        "user",
-        "admin",
-        "organization",
-      ],
-      default: "user",
-    },
-
-    // =========================
-    // ORGANIZATION SUPPORT
-    // =========================
-
-    organizationName: {
-      type: String,
-      default: null,
-    },
-
-    organizationType: {
-      type: String,
-      default: null,
-    },
-
-    organizationAddress: {
-      type: String,
-      default: null,
-    },
-
-    organizationLogo: {
-      type: String,
-      default: null,
-    },
-
-    organizationVerified: {
-      type: Boolean,
-      default: false,
-    },
-
-    // =========================
-    // ACCOUNT STATUS
-    // =========================
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-
-    emailVerified: {
-      type: Boolean,
-      default: false,
-    },
-
-    // =========================
-    // 🔔 FIREBASE NOTIFICATIONS
-    // =========================
-
-    // Single device support
-    fcmToken: {
-      type: String,
-      default: null,
-    },
-
-    // Multi-device support
-    fcmTokens: [
-      {
-        type: String,
-      },
-    ],
-
-    // Notification preferences
     notificationSettings: {
       email: {
         type: Boolean,
@@ -139,41 +64,19 @@ const userSchema = new mongoose.Schema(
 
       sms: {
         type: Boolean,
-        default: false,
+        default: true,
       },
     },
 
-    // =========================
-    // DEVICE & LOGIN TRACKING
-    // =========================
+    fcmTokens: [
+      {
+        type: String,
+      },
+    ],
 
-    lastLoginAt: {
-      type: Date,
-      default: null,
-    },
-
-    lastLoginDevice: {
-      type: String,
-      default: null,
-    },
-
-    // =========================
-    // SECURITY
-    // =========================
-
-    passwordChangedAt: {
-      type: Date,
-      default: null,
-    },
-
-    failedLoginAttempts: {
-      type: Number,
-      default: 0,
-    },
-
-    accountLockedUntil: {
-      type: Date,
-      default: null,
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {

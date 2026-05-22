@@ -1,5 +1,6 @@
 const admin = require("../../../config/firebase");
-
+const Subscription = require("../../subscriptions/models/subscription.model");
+const Bill = require("../../bills/models/bill.model");
 const Notification = require(
   "../models/notification.model"
 );
@@ -7,6 +8,7 @@ const Notification = require(
 const User = require(
   "../../auth/models/user.model"
 );
+
 
 const { sendToUser } = require(
   "../../../config/socket"
@@ -169,34 +171,47 @@ const notifyUser = async ({
   // =========================
   // SOCKET
   // =========================
-  sendRealtimeNotification(
-    userId,
-    payload
-  );
+  // sendRealtimeNotification(
+  //   userId,
+  //   payload
+  // );
 
+  // channels.socket = true;
+  try {
+  sendRealtimeNotification(userId, payload);
   channels.socket = true;
+} catch (err) {
+  channels.socket = false;
+}
 
   // =========================
   // FIREBASE PUSH
   // =========================
-  if (
-    user.notificationSettings?.push &&
-    user.fcmToken
-  ) {
-    const fcmId =
-      await sendPushNotification(
-        user.fcmToken,
-        title,
-        message
-      );
+  // if (
+  //   user.notificationSettings?.push &&
+  //   user.fcmToken
+  // ) {
+  //   const fcmId =
+  //     await sendPushNotification(
+  //       user.fcmToken,
+  //       title,
+  //       message
+  //     );
 
-    if (fcmId) {
-      channels.push = true;
+  //   if (fcmId) {
+  //     channels.push = true;
 
-      notification.fcmMessageId =
-        fcmId;
-    }
+  //     notification.fcmMessageId =
+  //       fcmId;
+  //   }
+  // }
+  if (user.notificationSettings?.push && user.fcmTokens?.length) {
+  for (const token of user.fcmTokens) {
+    await sendPushNotification(token, title, message);
   }
+
+  channels.push = true;
+}
 
   // =========================
   // EMAIL
@@ -270,8 +285,88 @@ const markAsRead = async (id, userId) => {
   return notification;
 };
 
+const notifySubscribers = async (organizationId, title, message) => {
+  const subs = await Subscription.find({
+    organizationId,
+    status: "active",
+    visibleToUser: true,
+  });
+
+  let success = 0;
+  let failed = 0;
+
+  for (const sub of subs) {
+    try {
+      if (!sub.userId) {
+        failed++;
+        continue;
+      }
+
+      await notifyUser({
+        userId: sub.userId,
+        title,
+        message,
+        type: "organization",
+      });
+
+      success++;
+    } catch (err) {
+      failed++;
+    }
+  }
+
+  return {
+    total: subs.length,
+    success,
+    failed,
+  };
+};
+const notifyBillUsers = async (organizationId, billId, message) => {
+  const bill = await Bill.findOne({
+    _id: billId,
+    organizationId,
+  });
+
+  if (!bill) {
+    throw new Error("Bill not found");
+  }
+
+  const subscriptions = await Subscription.find({
+    organizationId,
+    status: "active",
+    userId: { $ne: null },
+  });
+
+  let success = 0;
+  let failed = 0;
+
+  for (const sub of subscriptions) {
+    try {
+      await notifyUser({
+        userId: sub.userId,
+        title: "Bill Notification",
+        message:
+          message || `${bill.title} payment reminder`,
+        type: "bill",
+      });
+
+      success++;
+    } catch (err) {
+      failed++;
+    }
+  }
+
+  return {
+    billId,
+    total: subscriptions.length,
+    success,
+    failed,
+  };
+};
 module.exports = {
   notifyUser,
-  getUserNotifications,   // ✅ ADD THIS
+  getUserNotifications,   
   markAsRead,  
+  notifySubscribers,
+  notifyBillUsers
 };

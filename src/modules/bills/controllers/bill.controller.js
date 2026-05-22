@@ -2,14 +2,12 @@
 
 const billService = require("../services/bill.service");
 
-// =======================================
-// ORGANIZATION CREATE BILL
-// =======================================
+
 const createBill = async (req, res) => {
   try {
     const bill = await billService.createBill(
       req.body,
-      req.user.id
+      req.user // 👈 pass full user object, not only id
     );
 
     res.status(201).json({
@@ -23,22 +21,23 @@ const createBill = async (req, res) => {
     });
   }
 };
-
-// =======================================
-// USER GET HIS BILLS
-// =======================================
 const getMyBills = async (req, res) => {
   try {
-    const bills =
-      await billService.getUserBills(
-        req.user.id,
-        req.query.type
-      );
+
+    console.log("USER PHONE:", req.user.phone);
+    console.log("USER ID:", req.user.id);
+
+    const bills = await billService.getUserBills(
+      req.user.id,
+      req.user.phone,
+      req.query.type
+    );
 
     res.status(200).json({
       success: true,
       data: bills,
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -46,25 +45,25 @@ const getMyBills = async (req, res) => {
     });
   }
 };
-
 // =======================================
 // ORGANIZATION GET BILLS
 // =======================================
-const getOrganizationBills = async (
-  req,
-  res
-) => {
+const getOrganizationBills = async (req, res) => {
   try {
-    const bills =
-      await billService.getOrganizationBills(
-        req.user.id
-      );
+    const orgId = req.user._id; // ✅ FIX HERE
+
+    console.log("🏢 ORG ID:", orgId);
+
+    const bills = await billService.getOrganizationBills(orgId);
+
+    console.log("📦 FOUND BILLS:", bills.length);
 
     res.status(200).json({
       success: true,
       data: bills,
     });
   } catch (error) {
+    console.error("ORG BILL ERROR:", error);
     res.status(500).json({
       success: false,
       message: error.message,

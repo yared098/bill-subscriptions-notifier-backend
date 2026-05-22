@@ -1,28 +1,89 @@
 // services/bill.service.js
-
+const { notifyUser } = require("../../notifications/services/notification.service");
 const Bill = require("../models/bill.model");
+const { onBillCreated } = require("../../notifications/events/notification.events");
 
 // =======================================
 // ORGANIZATION CREATE BILL
 // =======================================
-const createBill = async (data, organizationId) => {
+const createBill = async (data, user) => {
   const bill = await Bill.create({
     ...data,
-    organizationId,
+
+    // ✅ REQUIRED BY SCHEMA
+    organizationId: user.id,
+    organizationName: user.organizationName, // 👈 FIXED
+
   });
+   // =========================
+  // 🔔 REAL-TIME NOTIFICATION
+  // =========================
+  if (bill.userId) {
+    await notifyUser({
+      userId: bill.userId,
+      title: "New Bill Created",
+      message: `${bill.title || "A new bill"} has been created`,
+      type: "bill",
+    });
+  }
+  // 🔥 THIS is where it runs
+   await onBillCreated(bill, user.organizationName);
 
   return bill;
+};
+const normalizePhone = (phone) => {
+  if (!phone) return null;
+
+  return phone
+    .replace(/\s/g, "")
+    .replace("+251", "")
+    .replace(/^0/, "")
+    .trim();
 };
 
 // =======================================
 // USER GET HIS BILLS
 // =======================================
-const getUserBills = async (userId, type) => {
-  let filter = {
-    userId,
-    visibleToUser: { $ne: false },
-  };
+const getUserBills = async (
+  userId,
+  phone,
+  type
+) => {
 
+  const filter = {};
+
+  const orConditions = [];
+
+  // =========================
+  // MATCH USER ID
+  // =========================
+  if (userId) {
+    orConditions.push({
+      userId: userId,
+    });
+  }
+
+  // =========================
+  // MATCH PHONE NUMBER
+  // =========================
+  if (phone) {
+    orConditions.push({
+      customerPhone: phone,
+    });
+  }
+
+  // =========================
+  // MUST HAVE MATCH CONDITION
+  // =========================
+  if (orConditions.length === 0) {
+    return [];
+  }
+
+  filter.$or = orConditions;
+
+  // =========================
+  // TYPE FILTERS
+  // =========================
   const now = new Date();
 
   if (type === "paid") {
@@ -35,43 +96,59 @@ const getUserBills = async (userId, type) => {
 
   if (type === "upcoming") {
     filter.status = "unpaid";
-    filter.dueDate = { $gte: now };
+    filter.dueDate = {
+      $gte: now,
+    };
   }
-
-  return await Bill.find(filter).sort({
+  const bills = await Bill.find(filter).sort({
     dueDate: 1,
   });
+  return bills;
 };
 
 // =======================================
-// ORGANIZATION GET CREATED BILLS
+// ORGANIZATION GET CREATED BILLS (FIXED)
 // =======================================
-const getOrganizationBills = async (
-  organizationId
-) => {
+const getOrganizationBills = async (organizationId) => {
+  if (!organizationId) return [];
+
   return await Bill.find({
-    organizationId,
-  }).sort({
-    createdAt: -1,
-  });
+    organizationId, // ✅ KEEP SIMPLE
+  }).sort({ createdAt: -1 });
 };
 
-// =======================================
-// SINGLE BILL
-// USER CAN VIEW HIS OWN
-// OR COMPANY CAN VIEW OWN CREATED BILL
-// =======================================
-const getBillById = async (
-  billId,
-  user
-) => {
-  return await Bill.findOne({
+
+const getBillById = async (billId, user) => {
+  if (!billId) return null;
+
+  const query = {
     _id: billId,
-    $or: [
-      { userId: user.id },
-      { organizationId: user.id },
-    ],
-  });
+    $or: [],
+  };
+
+  // =========================
+  // USER ACCESS (MOBILE)
+  // =========================
+  if (user.phone) {
+    query.$or.push({
+      customerPhone: normalizePhone(user.phone),
+    });
+  }
+
+  if (user.id) {
+    query.$or.push({ userId: user.id });
+  }
+
+  // =========================
+  // ORGANIZATION ACCESS
+  // =========================
+  if (user.id) {
+    query.$or.push({ organizationId: user.id });
+  }
+
+  if (query.$or.length === 0) return null;
+
+  return await Bill.findOne(query);
 };
 
 // =======================================

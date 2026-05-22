@@ -46,8 +46,55 @@ const markAsRead = async (
     });
   }
 };
+// =========================
+// NOTIFY ALL SUBSCRIBERS
+// =========================
+const notifySubscribers = async (req, res) => {
+  try {
+    const result = await notificationService.notifySubscribers(
+      req.user.id, // organizationId
+      req.body.title,
+      req.body.message
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// =========================
+// NOTIFY BILL USERS
+// =========================
+const notifyBill = async (req, res) => {
+  try {
+    const result = await notificationService.notifyBillUsers(
+      req.user.id,
+      req.body.billId,
+      req.body.message
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 module.exports = {
   getNotifications,
   markAsRead,
+  notifySubscribers,
+  notifyBill,
 };

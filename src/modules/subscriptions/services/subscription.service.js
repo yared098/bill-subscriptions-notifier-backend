@@ -1,14 +1,26 @@
 const Subscription = require("../models/subscription.model");
+const { notifyUser } = require("../../notifications/services/notification.service");
+const { onSubscriptionCreated } = require("../../notifications/events/notification.events");
 
-// =======================================
-// ORGANIZATION CREATE SUBSCRIPTION
-// =======================================
 const createSubscription = async (data, organization) => {
-  return await Subscription.create({
+  const sub = await Subscription.create({
     ...data,
     organizationId: organization.id,
-    organizationName: organization.name,
+    organizationName: organization.organizationName,
   });
+
+  // 🔔 trigger notification AFTER creation
+  if (sub.userId) {
+    await notifyUser({
+      userId: sub.userId,
+      title: "New Subscription Added",
+      message: `${sub.serviceName} subscription has been created`,
+      type: "subscription",
+    });
+  }
+    await onSubscriptionCreated(sub, organization.organizationName);
+
+  return sub;
 };
 
 // =======================================
@@ -76,20 +88,32 @@ const unsubscribe = async (subscriptionId, userPhone, reason) => {
   );
 };
 
-// =======================================
-// ORGANIZATION UPDATE
-// =======================================
 const updateSubscription = async (id, organizationId, data) => {
+  const allowedFields = [
+    "serviceName",
+    "amount",
+    "billingCycle",
+    "renewalDate",
+    "status",
+  ];
+
+  const updateData = {};
+
+  allowedFields.forEach((field) => {
+    if (data[field] !== undefined) {
+      updateData[field] = data[field];
+    }
+  });
+
   return await Subscription.findOneAndUpdate(
     {
       _id: id,
       organizationId,
     },
-    data,
+    { $set: updateData },
     { new: true }
   );
 };
-
 // =======================================
 // ORGANIZATION DELETE
 // =======================================

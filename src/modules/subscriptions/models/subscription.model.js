@@ -2,25 +2,14 @@ const mongoose = require("mongoose");
 
 const subscriptionSchema = new mongoose.Schema(
   {
-    // ====================================
-    // CONNECTED USER (OPTIONAL)
-    // Added automatically after phone match
-    // ====================================
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-
-    // ====================================
-    // COMPANY / ORGANIZATION
-    // Example:
-    // Netflix, Ethio Telecom, Canal+
-    // ====================================
+    // =========================
+    // ORGANIZATION OWNER
+    // =========================
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Organization",
       required: true,
+      index: true,
     },
 
     organizationName: {
@@ -28,10 +17,9 @@ const subscriptionSchema = new mongoose.Schema(
       required: true,
     },
 
-    // ====================================
-    // CUSTOMER INFO
-    // Phone number is the relationship key
-    // ====================================
+    // =========================
+    // USER RELATION (PHONE BASED)
+    // =========================
     customerPhone: {
       type: String,
       required: true,
@@ -45,15 +33,17 @@ const subscriptionSchema = new mongoose.Schema(
       trim: true,
     },
 
-    customerEmail: {
-      type: String,
-      trim: true,
-      lowercase: true,
+    // OPTIONAL LINK (only if user exists in system)
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
     },
 
-    // ====================================
+    // =========================
     // SUBSCRIPTION INFO
-    // ====================================
+    // =========================
     serviceName: {
       type: String,
       required: true,
@@ -73,106 +63,30 @@ const subscriptionSchema = new mongoose.Schema(
     renewalDate: {
       type: Date,
       required: true,
+      index: true,
     },
 
-    autoRenew: {
-      type: Boolean,
-      default: true,
-    },
-
-    category: {
-      type: String,
-      default: "Other",
-    },
-
-    provider: {
-      type: String,
-    },
-
-    notes: {
-      type: String,
-    },
-
-    // ====================================
-    // STATUS MANAGEMENT
-    // ====================================
     status: {
       type: String,
-      enum: [
-        "active",
-        "cancelled",
-        "paused",
-        "expired",
-        "pending",
-      ],
+      enum: ["active", "cancelled", "paused", "expired"],
       default: "active",
     },
 
-    // ====================================
-    // USER UNSUBSCRIBE FEATURE
-    // ====================================
+    // =========================
+    // USER CONTROL
+    // =========================
     unsubscribedByUser: {
       type: Boolean,
       default: false,
     },
 
-    unsubscribeReason: {
-      type: String,
-    },
+    unsubscribeReason: String,
 
-    unsubscribedAt: {
-      type: Date,
-    },
+    unsubscribedAt: Date,
 
-    // ====================================
-    // REMINDER / NOTIFICATION SYSTEM
-    // ====================================
-    notificationEnabled: {
-      type: Boolean,
-      default: true,
-    },
-
-    renewalReminderSent: {
-      type: Boolean,
-      default: false,
-    },
-
-    lastReminderDate: {
-      type: Date,
-    },
-
-    // ====================================
-    // PAYMENT TRACKING
-    // ====================================
-    lastPaymentDate: {
-      type: Date,
-    },
-
-    nextBillingAmount: {
-      type: Number,
-    },
-
-    currency: {
-      type: String,
-      default: "ETB",
-    },
-
-    // ====================================
-    // IMPORT SYSTEM
-    // Organization uploaded from Excel
-    // ====================================
-    importedFromExcel: {
-      type: Boolean,
-      default: false,
-    },
-
-    excelBatchId: {
-      type: String,
-    },
-
-    // ====================================
-    // DEVICE / APP VISIBILITY
-    // ====================================
+    // =========================
+    // VISIBILITY
+    // =========================
     visibleToUser: {
       type: Boolean,
       default: true,
@@ -183,7 +97,4 @@ const subscriptionSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model(
-  "Subscription",
-  subscriptionSchema
-);
+module.exports = mongoose.model("Subscription", subscriptionSchema);

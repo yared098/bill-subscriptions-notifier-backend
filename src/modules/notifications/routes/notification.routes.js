@@ -8,8 +8,12 @@ const notificationController = require(
 
 const {
   protect,
+  organizationOnly, // ✅ IMPORT THIS
 } = require("../../auth/middlewares/auth.middleware");
 
+// =========================
+// USER ROUTES
+// =========================
 router.get(
   "/",
   protect,
@@ -20,6 +24,23 @@ router.put(
   "/:id/read",
   protect,
   notificationController.markAsRead
+);
+
+// =========================
+// ORGANIZATION ONLY ROUTES
+// =========================
+router.post(
+  "/notify/subscribers",
+  protect,
+  organizationOnly, // ✅ ADD HERE
+  notificationController.notifySubscribers
+);
+
+router.post(
+  "/notify/bill",
+  protect,
+  organizationOnly, // ✅ ADD HERE
+  notificationController.notifyBill
 );
 
 module.exports = router;

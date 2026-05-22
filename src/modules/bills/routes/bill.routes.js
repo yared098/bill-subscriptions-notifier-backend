@@ -1,70 +1,44 @@
-// routes/bill.routes.js
-
 const express = require("express");
-
 const router = express.Router();
 
 const billController = require("../controllers/bill.controller");
+const { protect } = require("../../auth/middlewares/auth.middleware");
 
-const {
-  protect,
-} = require("../../auth/middlewares/auth.middleware");
 
-// =======================================
-// USER ROUTES
-// =======================================
+// =====================================================
+// 🧑 USER ROUTES (MOBILE)
+// =====================================================
 
-// user sees own bills
-router.get(
-  "/my-bills",
-  protect,
-  billController.getMyBills
-);
+// get my bills (phone/userId match)
+router.get("/me", protect, billController.getMyBills);
 
-// user marks as paid
-router.patch(
-  "/:id/pay",
-  protect,
-  billController.payBill
-);
+// mark bill as paid
+router.patch("/:id/pay", protect, billController.payBill);
 
-// =======================================
-// ORGANIZATION ROUTES
-// =======================================
 
-// organization create bill
-router.post(
-  "/",
-  protect,
-  billController.createBill
-);
+// =====================================================
+// 🏢 ORGANIZATION ROUTES (DASHBOARD)
+// =====================================================
 
-// organization get own created bills
-router.get(
-  "/organization",
-  protect,
-  billController.getOrganizationBills
-);
+// create bill (auto binds organizationId)
+router.post("/", protect, billController.createBill);
 
-// single bill
-router.get(
-  "/:id",
-  protect,
-  billController.getBill
-);
+// get ONLY organization bills (STRICT FILTER)
+router.get("/organization", protect, billController.getOrganizationBills);
 
-// update
-router.put(
-  "/:id",
-  protect,
-  billController.updateBill
-);
 
-// delete
-router.delete(
-  "/:id",
-  protect,
-  billController.deleteBill
-);
+// =====================================================
+// 🔍 SHARED BILL ROUTES
+// =====================================================
+
+// get single bill (permission checked in service)
+router.get("/:id", protect, billController.getBill);
+
+// update bill (ONLY organization owner)
+router.put("/:id", protect, billController.updateBill);
+
+// delete bill (ONLY organization owner)
+router.delete("/:id", protect, billController.deleteBill);
+
 
 module.exports = router;

@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
+const Organization = require("../models/organization.model");
+
 
 const protect = async (req, res, next) => {
   try {
@@ -13,22 +15,31 @@ const protect = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-
-    // 🔥 verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 🔥 fetch real user from DB (IMPORTANT FIX)
-    const user = await User.findById(decoded.id).select("-password");
+    let account = null;
 
-    if (!user) {
+    if (decoded.type === "user") {
+      account = await User.findById(decoded.id).select("-password");
+    }
+
+    if (decoded.type === "organization") {
+      account = await Organization.findById(decoded.id).select("-password");
+    }
+
+    if (!account) {
       return res.status(401).json({
         success: false,
-        message: "User not found",
+        message: "Account not found",
       });
     }
 
-    // attach full user (NOT only decoded token)
-    req.user = user;
+    // ✅ FORCE CONSISTENT ID
+    req.user = {
+      ...account.toObject(),
+      id: account._id.toString(),
+    };
+
     req.tokenData = decoded;
 
     next();
@@ -39,7 +50,20 @@ const protect = async (req, res, next) => {
     });
   }
 };
+// middlewares/role.middleware.js
+const organizationOnly = (req, res, next) => {
+  if (req.user.role !== "organization") {
+    return res.status(403).json({
+      success: false,
+      message: "Only organization can send notifications",
+    });
+  }
+
+  next();
+};
+
 
 module.exports = {
   protect,
+  organizationOnly
 };
