@@ -13,10 +13,14 @@ const initSocket = (server) => {
   io.on("connection", (socket) => {
     console.log("🟢 User connected:", socket.id);
 
-    // join personal room
     socket.on("join", (userId) => {
-      socket.join(userId);
-      console.log(`User joined room: ${userId}`);
+      if (!userId) return;
+
+      const roomId = userId.toString();
+
+      socket.join(roomId);
+
+      console.log(`🟢 User joined room: ${roomId}`);
     });
 
     socket.on("disconnect", () => {
@@ -31,9 +35,16 @@ const initSocket = (server) => {
 // SEND TO USER ROOM
 // =========================
 const sendToUser = (userId, data) => {
-  if (!io) return;
+  if (!io) {
+    console.log("❌ Socket not initialized");
+    return;
+  }
 
-  io.to(userId).emit("notification", {
+  const roomId = userId?.toString();
+
+  console.log("📡 Sending to room:", roomId);
+
+  io.to(roomId).emit("notification", {
     ...data,
     timestamp: new Date(),
   });
